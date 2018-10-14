@@ -32,7 +32,8 @@ class Vertex:
   def print_results(self):
     print("{}:{},{},{}\n".format(self.id, self.environ, self.factors, self.neighbors))
 
-def initMaze(totalNodes, borderNodes, borderEdges, nonborderEdges, monsters, walls, holes, golds, spreading, dr):
+# INITIALIZING THE MAZE
+def initMaze(totalNodes, borderNodes, borderEdges, nonborderEdges, monsters, walls, holes, golds, spreading, dr, t_gates):
   vertices = []
   node_id = 0
   while node_id < borderNodes:
@@ -41,6 +42,7 @@ def initMaze(totalNodes, borderNodes, borderEdges, nonborderEdges, monsters, wal
     vertices[node_id].set_environ("hole", 0)
     vertices[node_id].set_environ("monster", 0)
     vertices[node_id].set_environ("gold", 0)
+    vertices[node_id].set_environ("teleport", 0)
     vertices[node_id].set_factors("wind", 0.0)
     vertices[node_id].set_factors("smell", 0.0)
     node_id += 1
@@ -52,6 +54,7 @@ def initMaze(totalNodes, borderNodes, borderEdges, nonborderEdges, monsters, wal
     vertices[i_id].set_environ("hole", 0)
     vertices[i_id].set_environ("monster", 0)
     vertices[i_id].set_environ("gold", 0)
+    vertices[i_id].set_environ("teleport", 0)
     vertices[i_id].set_factors("wind", 0.0)
     vertices[i_id].set_factors("smell", 0.0)
     i_id += 1
@@ -104,6 +107,8 @@ def initMaze(totalNodes, borderNodes, borderEdges, nonborderEdges, monsters, wal
     room_attributes.append("gold")
   for i in range(0, monsters):
     room_attributes.append("monster")
+  for i in range(0, t_gates):
+    room_attributes.append("teleport")
 
   while len(room_attributes) != totalNodes:
     room_attributes.append("none")   # fill empty places in case sum of attributes < N
@@ -128,11 +133,49 @@ def initMaze(totalNodes, borderNodes, borderEdges, nonborderEdges, monsters, wal
   addFactors("monster")
   addFactors("hole")
 
+
   for i in range(0, totalNodes):
-    print("{}:{},{},{},{},{},{} {}\n".format(vertices[i].get_id(), vertices[i].get_environ("wall"), 
+    print("{}:{},{},{},{},{},{},{} {}\n".format(vertices[i].get_id(), vertices[i].get_environ("wall"), 
       vertices[i].get_environ("hole"), 
       vertices[i].get_environ("monster"),
-      vertices[i].get_environ("gold"), vertices[i].get_factors("wind"), vertices[i].get_factors("smell"), 
+      vertices[i].get_environ("gold"), vertices[i].get_environ("teleport"),
+      vertices[i].get_factors("wind"), vertices[i].get_factors("smell"), 
+      " ".join(map(str , vertices[i].get_neihbors()))))
+    i += 1
+
+  prevlocations = []
+
+  # for i in range(0, totalNodes):
+  prevlocations.append(-1)
+
+  def moveMonster():
+    for i in range(0, totalNodes):
+      print(prevlocations[len(prevlocations)-1])
+      if prevlocations[len(prevlocations)-1] != -1:
+        vertices[prevlocations[len(prevlocations)-1]].set_environ("monster", 1)
+        for n in vertices[prevlocations[len(prevlocations)-1]].get_neihbors():
+          vertices[n].set_environ("monster", 0)
+          #prevlocations.remove(prevlocations[len(prevlocations)-1])
+          #print("prev loc: " + str(prevlocations[len(prevlocations)-1]))
+
+      if vertices[i].get_environ("monster") == 1:
+        vertices[i].set_environ("monster", 0)
+        for neighbor in vertices[i].get_neihbors():
+          if vertices[neighbor].get_environ("hole") == 1 or vertices[neighbor].get_environ("wall") == 1:
+            vertices[neighbor].set_environ("monster", 1)   # must teleport only to one neighbor randomly
+            prevlocations.append(i)
+            print("app: " + str(i))
+          else:
+            vertices[neighbor].set_environ("monster", 1)
+
+  moveMonster()
+
+  for i in range(0, totalNodes):
+    print("{}:{},{},{},{},{},{},{} {}\n".format(vertices[i].get_id(), vertices[i].get_environ("wall"), 
+      vertices[i].get_environ("hole"), 
+      vertices[i].get_environ("monster"),
+      vertices[i].get_environ("gold"), vertices[i].get_environ("teleport"),
+      vertices[i].get_factors("wind"), vertices[i].get_factors("smell"), 
       " ".join(map(str , vertices[i].get_neihbors()))))
     i += 1
 
@@ -142,8 +185,10 @@ def initMaze(totalNodes, borderNodes, borderEdges, nonborderEdges, monsters, wal
   for i in range(0, totalNodes):
     row = str(vertices[i].get_id()) + ":" + str(vertices[i].get_environ("wall")) + ","\
     + str(vertices[i].get_environ("hole")) + "," + str(vertices[i].get_environ("monster")) + ","\
-    + str(vertices[i].get_environ("gold")) + "," + str(vertices[i].get_factors("wind")) + ","\
+    + str(vertices[i].get_environ("gold")) + "," + str(vertices[i].get_environ("teleport")) + ","\
+    + str(vertices[i].get_factors("wind")) + ","\
     + str(vertices[i].get_factors("smell")) + " " + str(" ".join(map(str , vertices[i].get_neihbors())))
+
     file.write(row)
     file.write("\n")  
 
@@ -163,13 +208,15 @@ def loadMaze(file, dr, spreading):
       hole = int(tokens[1].split(",")[1])
       monster = int(tokens[1].split(",")[2])
       gold = int(tokens[1].split(",")[3])
-      wind = float(tokens[1].split(",")[4])
-      pieces = tokens[1].split(",")[5].split(" ")
+      teleport = int(tokens[1].split(",")[4])
+      wind = float(tokens[1].split(",")[5])
+      pieces = tokens[1].split(",")[6].split(" ")
       smell = float(pieces[0])
       v.set_environ("wall", wall)
       v.set_environ("hole", hole)
       v.set_environ("monster", monster)
       v.set_environ("gold", gold)
+      v.set_environ("teleport", teleport)
       v.set_factors("wind", wind)
       v.set_factors("smell", smell)
       j = 1
@@ -231,13 +278,16 @@ def loadMaze(file, dr, spreading):
 
   # # PRINTING
   for i in range(0, totalNodes):
-    print("{}:{},{},{},{},{},{} {}\n".format(vertices[i].get_id(), vertices[i].get_environ("wall"), 
+    print("{}:{},{},{},{},{},{},{} {}\n".format(vertices[i].get_id(), vertices[i].get_environ("wall"), 
       vertices[i].get_environ("hole"), 
       vertices[i].get_environ("monster"),
-      vertices[i].get_environ("gold"), vertices[i].get_factors("wind"), vertices[i].get_factors("smell"), 
+      vertices[i].get_environ("gold"), 
+      vertices[i].get_environ("teleport"), 
+      vertices[i].get_factors("wind"), vertices[i].get_factors("smell"), 
       " ".join(map(str , vertices[i].get_neihbors()))))
     i += 1
 
+  
 
 # READING FROM COMMAND LINE
 if len(sys.argv) > 5:
@@ -253,6 +303,7 @@ if len(sys.argv) > 5:
   golds = int(sys.argv[9])
   dr = float(sys.argv[10])
   spreading = int(sys.argv[11])
+  t_gates = int(sys.argv[12])
 
   if borderNodes > totalNodes or borderEdges > nonborderEdges or borderEdges < 0:
     print("Invalid inputs")
@@ -266,13 +317,13 @@ if len(sys.argv) > 5:
 
   #print("N is {}, K is {}, k is {}".format(totalNodes, borderNodes, nonborderNodes))
 
-  if (walls + holes + golds + monsters) > totalNodes:
+  if (walls + holes + golds + monsters + t_gates) > totalNodes:
     print("Total sum of attributes shouldn't exceed total num of nodes")
     exit()
   #else:
     #print("Total sum of attributes: {}\n".format(walls + holes + golds + monsters))
 
-  print(functionCall(totalNodes, borderNodes, borderEdges, nonborderEdges, monsters, walls, holes, golds, spreading, dr))
+  print(functionCall(totalNodes, borderNodes, borderEdges, nonborderEdges, monsters, walls, holes, golds, spreading, dr, t_gates))
 
 else:
   func = eval(sys.argv[1])
@@ -282,7 +333,4 @@ else:
 
   print(func(f, dr, spreading))
 
-
-
-# INDEXING NODES AND ASSIGNING EDGES
 
