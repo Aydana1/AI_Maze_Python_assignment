@@ -144,29 +144,56 @@ def initMaze(totalNodes, borderNodes, borderEdges, nonborderEdges, monsters, wal
     i += 1
 
   prevlocations = []
+  adjlocations = []
+  teleportations = []
 
-  # for i in range(0, totalNodes):
   prevlocations.append(-1)
+  adjlocations.append(-1)
+  teleportations.append(-1)
+
+  tGates = []
+  for i in range(0, totalNodes):
+    if vertices[i].get_environ("teleport") == 1:
+      tGates.append(vertices[i].get_id()) 
 
   def moveMonster():
     for i in range(0, totalNodes):
-      print(prevlocations[len(prevlocations)-1])
+      # print(prevlocations[len(prevlocations)-1])
       if prevlocations[len(prevlocations)-1] != -1:
-        vertices[prevlocations[len(prevlocations)-1]].set_environ("monster", 1)
-        for n in vertices[prevlocations[len(prevlocations)-1]].get_neihbors():
-          vertices[n].set_environ("monster", 0)
+        curr2 = vertices[prevlocations[len(prevlocations)-1]].get_environ("monster")
+        print("ind = " + str(prevlocations[len(prevlocations)-1]))
+        vertices[prevlocations[len(prevlocations)-1]].set_environ("monster", curr2+1)
+        prevlocations[len(prevlocations)-1] = -1
+      
+      if teleportations[len(teleportations)-1] != -1:
+        curr3 = vertices[teleportations[len(teleportations)-1]].get_environ("monster")
+        vertices[teleportations[len(teleportations)-1]].set_environ("monster", curr3+1)
+        teleportations[len(teleportations)-1] = -1
+        # for n in vertices[prevlocations[len(prevlocations)-1]].get_neihbors():
+        #   curr2 = vertices[n].get_environ("monster")
+        #   if n == adjlocations[len(adjlocations)-1]:
+        #     vertices[n].set_environ("monster", curr2-1)
           #prevlocations.remove(prevlocations[len(prevlocations)-1])
           #print("prev loc: " + str(prevlocations[len(prevlocations)-1]))
 
-      if vertices[i].get_environ("monster") == 1:
-        vertices[i].set_environ("monster", 0)
-        for neighbor in vertices[i].get_neihbors():
-          if vertices[neighbor].get_environ("hole") == 1 or vertices[neighbor].get_environ("wall") == 1:
-            vertices[neighbor].set_environ("monster", 1)   # must teleport only to one neighbor randomly
-            prevlocations.append(i)
-            print("app: " + str(i))
-          else:
-            vertices[neighbor].set_environ("monster", 1)
+      if vertices[i].get_environ("monster") >= 1:
+        curr = vertices[i].get_environ("monster")
+        vertices[i].set_environ("monster", curr-1)
+        neighbor = random.choice(vertices[i].get_neihbors())
+        curr1 = vertices[neighbor].get_environ("monster")
+        if vertices[neighbor].get_environ("hole") == 1 or vertices[neighbor].get_environ("wall") == 1:
+          #vertices[neighbor].set_environ("monster", curr1+1)   # must teleport only to one neighbor randomly
+          prevlocations.append(i)
+          # adjlocations.append(neighbor)
+          print("i = " + str(i))
+        elif vertices[neighbor].get_environ("teleport") == 1:
+          gate_id = 0
+          while(gate_id != neighbor):
+            gate_id = random.choice(tGates)
+          teleportations.append(gate_id)
+        else:
+          vertices[neighbor].set_environ("monster", curr1+1)    # else move to one of neighbours 
+        
 
   moveMonster()
 
