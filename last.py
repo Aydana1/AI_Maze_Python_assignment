@@ -191,6 +191,12 @@ def initMaze(totalNodes, borderNodes, borderEdges, nonborderEdges, monsters, wal
           while(gate_id != neighbor):
             gate_id = random.choice(tGates)
           teleportations.append(gate_id)
+
+          # spread smell to all other gates except the current one
+          for g in range(0, len(tGates)):
+            if tGates[g] != neighbor:
+              print("T = " + str(vertices[tGates[g]].get_environ("teleport")))
+              vertices[tGates[g]].set_factors("smell", 1.0) 
         else:
           vertices[neighbor].set_environ("monster", curr1+1)    # else move to one of neighbours 
         
