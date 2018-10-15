@@ -194,6 +194,17 @@ def loadMaze(file, dr, spreading):
   #   print(vertices[i].get_neihbors())
 
   totalNodes = len(vertices)
+
+  # # PRINTING
+  def printNode(node):
+    print("{}:{},{},{},{},{},{},{} {}\n".format(node.get_id(), node.get_environ("wall"), 
+      node.get_environ("hole"), 
+      node.get_environ("monster"),
+      node.get_environ("gold"), 
+      node.get_environ("teleport"), 
+      node.get_factors("wind"), node.get_factors("smell"), 
+      " ".join(map(str , node.get_neihbors()))))
+
   # CALCULATE WIND AND SMELL 
   visited = []
   max_wind_vals = []
@@ -215,6 +226,8 @@ def loadMaze(file, dr, spreading):
         if not visited[neighbor]:
           visited[neighbor] = True
           spreadSmell(vertices[neighbor], spreading, dr, dist+1, dr*curr_smell)
+          # print("Smell propagated to " + str(neighbor))
+          # printNode(vertices[neighbor])
           for j in range(0, totalNodes):
             visited[j] = False
 
@@ -265,20 +278,10 @@ def loadMaze(file, dr, spreading):
   calculateWind()
 
 
-  # # PRINTING
-  for i in range(0, totalNodes):
-    print("{}:{},{},{},{},{},{},{} {}\n".format(vertices[i].get_id(), vertices[i].get_environ("wall"), 
-      vertices[i].get_environ("hole"), 
-      vertices[i].get_environ("monster"),
-      vertices[i].get_environ("gold"), 
-      vertices[i].get_environ("teleport"), 
-      vertices[i].get_factors("wind"), vertices[i].get_factors("smell"), 
-      " ".join(map(str , vertices[i].get_neihbors()))))
-    i += 1
 
   def propagateSmell(node):
     curr_smell = node.get_factors("smell")
-    print("SMELL = " + str(curr_smell) + " of " + str(node.get_id()))
+    # print("SMELL = " + str(curr_smell) + " of " + str(node.get_id()))
     spreadSmell(node, spreading, dr, 0, curr_smell)
 
   # MONSTER MOVING
@@ -294,54 +297,68 @@ def loadMaze(file, dr, spreading):
       if vertices[i].get_environ("teleport") == 1:
         tGates.append(vertices[i].get_id()) 
 
-    for i in range(0, totalNodes):
+    for i in range(0, 5):
       # print(prevlocations[len(prevlocations)-1])
       if prevlocations[len(prevlocations)-1] != -1:
         curr2 = vertices[prevlocations[len(prevlocations)-1]].get_environ("monster")
         # print("ind = " + str(prevlocations[len(prevlocations)-1]))
         vertices[prevlocations[len(prevlocations)-1]].set_environ("monster", curr2+1)
+        # printNode(vertices[prevlocations[len(prevlocations)-1]])
+        print("Monster returned to " + str(prevlocations[len(prevlocations)-1]))
+        printNode(vertices[prevlocations[len(prevlocations)-1]])
         prevlocations[len(prevlocations)-1] = -1
       
       if teleportations[len(teleportations)-1] != -1:
         curr3 = vertices[teleportations[len(teleportations)-1]].get_environ("monster")
         vertices[teleportations[len(teleportations)-1]].set_environ("monster", curr3+1)
+        # printNode(vertices[teleportations[len(teleportations)-1]])
+        print("Monster teleported to " + str(teleportations[len(teleportations)-1]))
+        printNode(vertices[teleportations[len(teleportations)-1]])
         teleportations[len(teleportations)-1] = -1
      
       if vertices[i].get_environ("monster") >= 1:
         curr = vertices[i].get_environ("monster")
         vertices[i].set_environ("monster", curr-1)
+        print("Monster left from " + str(i))
+        printNode(vertices[i])
         neighbor = random.choice(vertices[i].get_neihbors())
         curr1 = vertices[neighbor].get_environ("monster")
         if vertices[neighbor].get_environ("hole") == 1 or vertices[neighbor].get_environ("wall") == 1:
           prevlocations.append(i)
+          print("Smell propagation to neighbors of " + str(i))
           propagateSmell(vertices[i])
-          # print("i = " + str(i))
         elif vertices[neighbor].get_environ("teleport") == 1:
+          printNode(vertices[i])
           gate_id = 0
           while(gate_id != neighbor):
             gate_id = random.choice(tGates)
           teleportations.append(gate_id)
-
           # spread smell to all other gates 
           for g in range(0, len(tGates)):
             #print("T = " + str(vertices[tGates[g]].get_environ("teleport")))
-            vertices[tGates[g]].set_factors("smell", 1.0) 
+            vertices[tGates[g]].set_factors("smell", 1.0)
+          
+          print("Max Smell propagation")
+          printNode(vertices[i])
         else:
+          print("Smell propagation to neighbors of " + str(i))
+          # printNode(vertices[neighbor])
           propagateSmell(vertices[i])
           vertices[neighbor].set_environ("monster", curr1+1)    # else move to one of neighbours 
-        
+          print("Monster moved to node " + str(neighbor))
+          printNode(vertices[neighbor])
 
   moveMonster()
 
-  for i in range(0, totalNodes):
-    print("{}:{},{},{},{},{},{},{} {}\n".format(vertices[i].get_id(), vertices[i].get_environ("wall"), 
-      vertices[i].get_environ("hole"), 
-      vertices[i].get_environ("monster"),
-      vertices[i].get_environ("gold"), 
-      vertices[i].get_environ("teleport"), 
-      vertices[i].get_factors("wind"), vertices[i].get_factors("smell"), 
-      " ".join(map(str , vertices[i].get_neihbors()))))
-    i += 1
+  # for i in range(0, totalNodes):
+  #   print("{}:{},{},{},{},{},{},{} {}\n".format(vertices[i].get_id(), vertices[i].get_environ("wall"), 
+  #     vertices[i].get_environ("hole"), 
+  #     vertices[i].get_environ("monster"),
+  #     vertices[i].get_environ("gold"), 
+  #     vertices[i].get_environ("teleport"), 
+  #     vertices[i].get_factors("wind"), vertices[i].get_factors("smell"), 
+  #     " ".join(map(str , vertices[i].get_neihbors()))))
+  #   i += 1
   
 
 # READING FROM COMMAND LINE
