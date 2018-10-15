@@ -33,7 +33,7 @@ class Vertex:
     print("{}:{},{},{}\n".format(self.id, self.environ, self.factors, self.neighbors))
 
 # INITIALIZING THE MAZE
-def initMaze(totalNodes, borderNodes, borderEdges, nonborderEdges, monsters, walls, holes, golds, spreading, dr, t_gates):
+def initMaze(totalNodes, borderNodes, borderEdges, nonborderEdges, monsters, walls, holes, golds, t_gates, dr, spreading):
   vertices = []
   node_id = 0
   while node_id < borderNodes:
@@ -158,7 +158,7 @@ def initMaze(totalNodes, borderNodes, borderEdges, nonborderEdges, monsters, wal
   file.close()
 
 # LOADING THE MAZE
-def loadMaze(file, dr, spreading):
+def loadMaze(file, dr, spreading, tau):
   vertices = []
 
   with open(file) as f:
@@ -297,58 +297,75 @@ def loadMaze(file, dr, spreading):
       if vertices[i].get_environ("teleport") == 1:
         tGates.append(vertices[i].get_id()) 
 
-    for i in range(0, 5):
-      # print(prevlocations[len(prevlocations)-1])
-      if prevlocations[len(prevlocations)-1] != -1:
-        curr2 = vertices[prevlocations[len(prevlocations)-1]].get_environ("monster")
-        # print("ind = " + str(prevlocations[len(prevlocations)-1]))
-        vertices[prevlocations[len(prevlocations)-1]].set_environ("monster", curr2+1)
-        # printNode(vertices[prevlocations[len(prevlocations)-1]])
-        print("Monster returned to " + str(prevlocations[len(prevlocations)-1]))
-        printNode(vertices[prevlocations[len(prevlocations)-1]])
-        prevlocations[len(prevlocations)-1] = -1
+    for tick in range(0, tau):
+      for i in range(0, totalNodes):
+        # print(prevlocations[len(prevlocations)-1])
+        if prevlocations[len(prevlocations)-1] != -1:
+          curr2 = vertices[prevlocations[len(prevlocations)-1]].get_environ("monster")
+          # print("ind = " + str(prevlocations[len(prevlocations)-1]))
+          vertices[prevlocations[len(prevlocations)-1]].set_environ("monster", curr2+1)
+          # printNode(vertices[prevlocations[len(prevlocations)-1]])
+          print("Monster returned to " + str(prevlocations[len(prevlocations)-1]))
+          printNode(vertices[prevlocations[len(prevlocations)-1]])
+          prevlocations[len(prevlocations)-1] = -1
+        
+        if teleportations[len(teleportations)-1] != -1:
+          curr3 = vertices[teleportations[len(teleportations)-1]].get_environ("monster")
+          vertices[teleportations[len(teleportations)-1]].set_environ("monster", curr3+1)
+          # printNode(vertices[teleportations[len(teleportations)-1]])
+          print("Monster teleported to " + str(teleportations[len(teleportations)-1]))
+          printNode(vertices[teleportations[len(teleportations)-1]])
+          teleportations[len(teleportations)-1] = -1
       
-      if teleportations[len(teleportations)-1] != -1:
-        curr3 = vertices[teleportations[len(teleportations)-1]].get_environ("monster")
-        vertices[teleportations[len(teleportations)-1]].set_environ("monster", curr3+1)
-        # printNode(vertices[teleportations[len(teleportations)-1]])
-        print("Monster teleported to " + str(teleportations[len(teleportations)-1]))
-        printNode(vertices[teleportations[len(teleportations)-1]])
-        teleportations[len(teleportations)-1] = -1
-     
-      if vertices[i].get_environ("monster") >= 1:
-        curr = vertices[i].get_environ("monster")
-        vertices[i].set_environ("monster", curr-1)
-        print("Monster left from " + str(i))
-        printNode(vertices[i])
-        neighbor = random.choice(vertices[i].get_neihbors())
-        curr1 = vertices[neighbor].get_environ("monster")
-        if vertices[neighbor].get_environ("hole") == 1 or vertices[neighbor].get_environ("wall") == 1:
-          prevlocations.append(i)
-          print("Smell propagation to neighbors of " + str(i))
-          propagateSmell(vertices[i])
-        elif vertices[neighbor].get_environ("teleport") == 1:
+        if vertices[i].get_environ("monster") >= 1:
+          curr = vertices[i].get_environ("monster")
+          vertices[i].set_environ("monster", curr-1)
+          vertices[i].set_factors("smell", 0.0)
+          print("Monster left from " + str(i))
           printNode(vertices[i])
-          gate_id = 0
-          while(gate_id != neighbor):
-            gate_id = random.choice(tGates)
-          teleportations.append(gate_id)
-          # spread smell to all other gates 
-          for g in range(0, len(tGates)):
-            #print("T = " + str(vertices[tGates[g]].get_environ("teleport")))
-            vertices[tGates[g]].set_factors("smell", 1.0)
-          
-          print("Max Smell propagation")
-          printNode(vertices[i])
-        else:
-          print("Smell propagation to neighbors of " + str(i))
-          # printNode(vertices[neighbor])
-          propagateSmell(vertices[i])
-          vertices[neighbor].set_environ("monster", curr1+1)    # else move to one of neighbours 
-          print("Monster moved to node " + str(neighbor))
-          printNode(vertices[neighbor])
+          neighbor = random.choice(vertices[i].get_neihbors())
+          curr1 = vertices[neighbor].get_environ("monster")
+          if vertices[neighbor].get_environ("hole") == 1 or vertices[neighbor].get_environ("wall") == 1:
+            prevlocations.append(i)
+            print("Smell propagation to neighbors of " + str(i))
+            propagateSmell(vertices[i])
+          elif vertices[neighbor].get_environ("teleport") == 1:
+            gate_id = 0
+            while(gate_id != neighbor):
+              gate_id = random.choice(tGates)
+            teleportations.append(gate_id)
+            # spread smell to all other gates 
+            for g in range(0, len(tGates)):
+              #print("T = " + str(vertices[tGates[g]].get_environ("teleport")))
+              vertices[tGates[g]].set_factors("smell", 1.0)
+            
+            print("Max Smell propagation")
+            printNode(vertices[i])
+          else:
+            print("Smell propagation to neighbors of " + str(i))
+            # printNode(vertices[neighbor])
+            propagateSmell(vertices[i])
+            vertices[neighbor].set_environ("monster", curr1+1)    # else move to one of neighbours 
+            print("Monster moved to node " + str(neighbor))
+            printNode(vertices[neighbor])
 
   moveMonster()
+
+  # WRITE FINAL CHANGE TO ANOTHER FILE
+
+  file = open("final.txt","w")
+
+  for i in range(0, totalNodes):
+    row = str(vertices[i].get_id()) + ":" + str(vertices[i].get_environ("wall")) + ","\
+    + str(vertices[i].get_environ("hole")) + "," + str(vertices[i].get_environ("monster")) + ","\
+    + str(vertices[i].get_environ("gold")) + "," + str(vertices[i].get_environ("teleport")) + ","\
+    + str(vertices[i].get_factors("wind")) + ","\
+    + str(vertices[i].get_factors("smell")) + " " + str(" ".join(map(str , vertices[i].get_neihbors())))
+
+    file.write(row)
+    file.write("\n")  
+
+  file.close()
 
   # for i in range(0, totalNodes):
   #   print("{}:{},{},{},{},{},{},{} {}\n".format(vertices[i].get_id(), vertices[i].get_environ("wall"), 
@@ -362,7 +379,7 @@ def loadMaze(file, dr, spreading):
   
 
 # READING FROM COMMAND LINE
-if len(sys.argv) > 5:
+if len(sys.argv) > 7:
   functionCall  = eval(sys.argv[1])
   totalNodes = int(sys.argv[2])
   borderNodes = int(sys.argv[3])
@@ -373,9 +390,9 @@ if len(sys.argv) > 5:
   walls = int(sys.argv[7])
   holes = int(sys.argv[8])
   golds = int(sys.argv[9])
-  dr = float(sys.argv[10])
-  spreading = int(sys.argv[11])
-  t_gates = int(sys.argv[12])
+  t_gates = int(sys.argv[10])
+  dr = float(sys.argv[11])
+  spreading = int(sys.argv[12])
 
   if borderNodes > totalNodes or borderEdges > nonborderEdges or borderEdges < 0:
     print("Invalid inputs")
@@ -395,14 +412,15 @@ if len(sys.argv) > 5:
   #else:
     #print("Total sum of attributes: {}\n".format(walls + holes + golds + monsters))
 
-  print(functionCall(totalNodes, borderNodes, borderEdges, nonborderEdges, monsters, walls, holes, golds, spreading, dr, t_gates))
+  print(functionCall(totalNodes, borderNodes, borderEdges, nonborderEdges, monsters, walls, holes, golds, t_gates, dr, spreading))
 
 else:
   func = eval(sys.argv[1])
   f = sys.argv[2]
   spreading = int(sys.argv[4])
   dr = float(sys.argv[3])
+  tau = int(sys.argv[5])
 
-  print(func(f, dr, spreading))
+  print(func(f, dr, spreading, tau))
 
 
