@@ -1,3 +1,6 @@
+I have initMaze and loadMaze functions in one file "last.py".
+There're also functions for smell&wind calculation, printing, monster moving, smell propagation.
+
 Commands for running the program:
 cd aidana_maze/proj
 For initializing the maze, run:
