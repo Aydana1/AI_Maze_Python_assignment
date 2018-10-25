@@ -8,7 +8,7 @@ python last.py initMaze N K k p M W H G T decay spreading
 E.g: python last.py initMaze 30 10 2 4 6 5 3 2 3 0.5 2
 
 For loading from the file, run:
-python last.py loadMaze maze.txt decay spreading tau
-E.g: python last.py loadMaze maze.txt 0.5 2 5
+python last.py loadMaze maze.txt decay spreading tau monsterType
+E.g: python last.py loadMaze maze.txt 0.5 2 5 social
 
 Final change of the maze is saved in "final.txt".

@@ -332,7 +332,7 @@ def loadMaze(file, dr, spreading, tau, monsterType):
 
             for i in range(0, len(tGates)):
                 if teleportWaits.get(i) == "waits":
-                    tGates.remove(i)
+                    tGates.remove(i)  # teleport gate except current
                     gateIndex = random.choice(tGates)
                     curr = vertices[gateIndex].get_environ("monster")
                     vertices[gateIndex].set_environ("monster", curr + 1)
@@ -340,66 +340,101 @@ def loadMaze(file, dr, spreading, tau, monsterType):
                     teleportWaits.update({i: "NOTwaits"})
 
             for i in range(0, len(monsters)):
-                neighbor = random.choice(vertices[monsters[i]].get_neihbors())
                 curr = vertices[monsters[i]].get_environ("monster")
                 vertices[monsters[i]].set_environ("monster",
                                                   curr - 1)  # monster leaves
 
                 # LONER: if own smell < curr smell
                 if monsterType == "loner":
-                    if vertices[monsters[i]].get_factors(
-                            "smell") < vertices[neighbor].get_factors("smell"):
-                        vertices[monsters[i]].set_environ("monster",
-                                                          curr + 1)  # return
-                    else:
-                        n = random.choice(vertices[monsters[i]].get_neihbors())
-                        ncurr = vertices[n].get_environ("monster")
-                        vertices[n].set_environ(
-                            "monster", ncurr + 1)  #move to random node
+                    n = random.choice(vertices[monsters[i]].get_neihbors())
+                    ncurr = vertices[n].get_environ("monster")
+                    vertices[n].set_environ("monster",
+                                            ncurr + 1)  #move to random node
 
-                        maxSmell = 0
-                        # CHOOSE MAX
-                        for k in vertices[n].get_neihbors():
-                            if maxSmell < vertices[k].get_factors("smell"):
-                                maxSmell = vertices[k].get_factors("smell")
-
+                    maxSmell = 0
+                    # CHOOSE MAX
+                    for k in vertices[n].get_neihbors():
+                        if maxSmell < vertices[k].get_factors("smell"):
+                            maxSmell = vertices[k].get_factors("smell")
                         # update smell of this random node
-                        vertices[n].set_factors("smell", maxSmell)
-                        propagateSmell(vertices[n])
+                    vertices[n].set_factors("smell", maxSmell)
+                    propagateSmell(vertices[n])
+
+                    if vertices[n].get_factors(
+                            "smell") < vertices[i].get_factors("smell"):
+                        vertices[monsters[i]].set_environ(
+                            "monster",
+                            vertices[monsters[i]].get_environ("monster") +
+                            1)  # return
+                        vertices[n].set_environ(
+                            "monster", vertices[n].get_environ("monster") - 1)
 
                 # SOCIAL: if own smell > curr smell
                 if monsterType == "social":
-                    if vertices[monsters[i]].get_factors(
-                            "smell") > vertices[neighbor].get_factors("smell"):
-                        vertices[monsters[i]].set_environ("monster",
-                                                          curr + 1)  # return
-                    else:
-                        n = random.choice(vertices[monsters[i]].get_neihbors())
-                        ncurr = vertices[n].get_environ("monster")
-                        vertices[n].set_environ(
-                            "monster", ncurr + 1)  #move to random node
+                    n = random.choice(vertices[monsters[i]].get_neihbors())
+                    ncurr = vertices[n].get_environ("monster")
+                    vertices[n].set_environ("monster",
+                                            ncurr + 1)  #move to random node
 
-                        # sum all smells of adj noes of this random node
-                        totalSmell = 0
-                        for k in vertices[n].get_neihbors():
-                            totalSmell += vertices[n].get_factors("smell")
-
+                    # sum all smells of adj noes of this random node
+                    totalSmell = 0
+                    for k in vertices[n].get_neihbors():
+                        totalSmell += vertices[n].get_factors("smell")
                         vertices[n].set_factors("smell", totalSmell)
                         propagateSmell(vertices[n])
 
+                    if vertices[n].get_factors(
+                            "smell") > vertices[i].get_factors("smell"):
+                        vertices[monsters[i]].set_environ(
+                            "monster",
+                            vertices[monsters[i]].get_environ("monster") +
+                            1)  # return
+                        vertices[n].set_environ(
+                            "monster", vertices[n].get_environ("monster") - 1)
+
                 ######################################################
-                if vertices[neighbor].get_environ("hole") == 1 or vertices[
-                        neighbor].get_environ("wall") == 1:
-                    monsterWaits.update({i: "waits"})
-                    propagateSmell(vertices[monsters[i]])
-                elif vertices[neighbor].get_environ("teleport") == 1:
-                    teleportWaits.update({i: "waits"})
-                    for g in range(0, len(tGates)):
-                        vertices[tGates[g]].set_factors("smell", 1.0)
-                else:
-                    propagateSmell(vertices[monsters[i]])
+                if monsterType == "unknown":
+                    neighbor = random.choice(
+                        vertices[monsters[i]].get_neihbors())
                     curr = vertices[monsters[i]].get_environ("monster")
-                    vertices[monsters[i]].set_environ("monster", curr + 1)
+                    ncurr = vertices[neighbor].get_environ("monster")
+                    vertices[monsters[i]].set_environ(
+                        "monster", curr - 1)  #monster leaves
+                    vertices[neighbor].set_environ("monster",
+                                                   ncurr + 1)  # monster moves
+
+                    propagateSmell(vertices[monsters[i]])  # update smell
+
+                    if vertices[neighbor].get_environ("hole") == 1 or vertices[
+                            neighbor].get_environ("wall") == 1:
+                        monsterWaits.update({
+                            i: "waits"
+                        })  #monster must return in the enxt clock tick
+                        vertices[neighbor].set_environ("monster", vertices[neighbor].get_environ("monster") - 1)
+                    elif vertices[neighbor].get_environ("teleport") == 1:
+                        teleportWaits.update({i: "waits"})
+                        vertices[neighbor].set_environ(
+                            "monster", vertices[neighbor].get_environ("monster") -
+                            1)  #leave curr node to teleport at next tick
+                        # update smell for all teleport gates as maximum
+                        for g in range(0, len(tGates)):
+                            vertices[tGates[g]].set_factors("smell", 1.0)
+
+                def moveMonsterOnPairWiseBasis():
+                    pairs = []
+                    listt = vertices[monsters[i]].get_neihbors()
+                    s = len(vertices[monsters[i]].get_neihbors())
+                    for m in range(0, s):
+                        j = m + 1
+                        if j == s:
+                            pairs.append((listt[0], listt[s - 1]))
+                            print(pairs)
+                            print(" ")
+                            break
+                        pair = (listt[m], listt[j])
+                        pairs.append(pair)
+
+                moveMonsterOnPairWiseBasis()
 
     moveMonster()
 
