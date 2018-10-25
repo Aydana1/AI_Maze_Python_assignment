@@ -11,4 +11,7 @@ For loading from the file, run:
 python last.py loadMaze maze.txt decay spreading tau monsterType
 E.g: python last.py loadMaze maze.txt 0.5 2 5 social
 
+Note: There're 3 monster types: social, loner and unknown.
+In case of "unknown" monster, configurations of previous assignment will be applied.
+
 Final change of the maze is saved in "final.txt".
