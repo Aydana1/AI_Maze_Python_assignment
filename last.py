@@ -59,8 +59,7 @@ def initMaze(totalNodes, borderNodes, borderEdges, nonborderEdges, monsters,
         vertices[node_id].set_environ("gold", 0)
         vertices[node_id].set_environ("teleport", 0)
         vertices[node_id].set_factors("wind", 0.0)
-        vertices[node_id].set_factors("smell-loner", 0.0)
-        vertices[node_id].set_factors("smell-social", 0.0)
+        vertices[node_id].set_factors("smell", 0.0)
         node_id += 1
 
     i_id = node_id
@@ -72,8 +71,7 @@ def initMaze(totalNodes, borderNodes, borderEdges, nonborderEdges, monsters,
         vertices[i_id].set_environ("gold", 0)
         vertices[i_id].set_environ("teleport", 0)
         vertices[i_id].set_factors("wind", 0.0)
-        vertices[i_id].set_factors("smell-loner", 0.0)
-        vertices[i_id].set_factors("smell-social", 0.0)
+        vertices[i_id].set_factors("smell", 0.0)
         i_id += 1
 
     # CONNECTING ALL NODES
@@ -148,8 +146,7 @@ def initMaze(totalNodes, borderNodes, borderEdges, nonborderEdges, monsters,
                     vertices[i].set_factors("wind", 1.0)
             elif environ == "monster":
                 if vertices[i].get_environ(environ) == 1:
-                    vertices[i].set_factors("smell-loner", 1.0)
-                    vertices[i].set_factors("smell-social", 1.0)
+                    vertices[i].set_factors("smell", 1.0)
 
     addFactors("monster")
     addFactors("hole")
@@ -171,7 +168,7 @@ def initMaze(totalNodes, borderNodes, borderEdges, nonborderEdges, monsters,
         + str(vertices[i].get_environ("hole")) + "," + str(vertices[i].get_environ("monster")) + ","\
         + str(vertices[i].get_environ("gold")) + "," + str(vertices[i].get_environ("teleport")) + ","\
         + str(vertices[i].get_factors("wind")) + ","\
-        + str(vertices[i].get_factors("smell-loner")) + "," + str(vertices[i].get_factors("smell-social")) + " " + str(" ".join(map(str , vertices[i].get_neihbors())))
+        + str(vertices[i].get_factors("smell")) + " " + str(" ".join(map(str , vertices[i].get_neihbors())))
 
         file.write(row)
         file.write("\n")
@@ -180,7 +177,7 @@ def initMaze(totalNodes, borderNodes, borderEdges, nonborderEdges, monsters,
 
 
 # LOADING THE MAZE
-def loadMaze(file, dr, spreading, tau):
+def loadMaze(file, dr, spreading, tau, monsterType):
     vertices = []
 
     with open(file) as f:
@@ -195,20 +192,15 @@ def loadMaze(file, dr, spreading, tau):
             gold = int(tokens[1].split(",")[3])
             teleport = int(tokens[1].split(",")[4])
             wind = float(tokens[1].split(",")[5])
-            smell_loner = float(tokens[1].split(",")[6])
-
             pieces = tokens[1].split(",")[6].split(" ")
-            smell_social = float(pieces[0])
-
+            smell = float(pieces[0])
             v.set_environ("wall", wall)
             v.set_environ("hole", hole)
             v.set_environ("monster", monster)
             v.set_environ("gold", gold)
             v.set_environ("teleport", teleport)
             v.set_factors("wind", wind)
-            v.set_factors("smell-loner", smell_loner)
-            v.set_factors("smell-loner", smell_social)
-
+            v.set_factors("smell", smell)
             j = 1
 
             while (j != len(pieces)):
@@ -224,12 +216,12 @@ def loadMaze(file, dr, spreading, tau):
 
     # # PRINTING
     def printNode(node):
-        print("{}:{},{},{},{},{},{},{},{} {}\n".format(
+        print("{}:{},{},{},{},{},{},{} {}\n".format(
             node.get_id(), node.get_environ("wall"), node.get_environ("hole"),
             node.get_environ("monster"), node.get_environ("gold"),
             node.get_environ("teleport"), node.get_factors("wind"),
-            node.get_factors("smell-loner"), node.get_factors("smell-social"),
-            " ".join(map(str, node.get_neihbors()))))
+            node.get_factors("smell"), " ".join(map(str,
+                                                    node.get_neihbors()))))
 
     # CALCULATE WIND AND SMELL
     visited = []
@@ -277,10 +269,7 @@ def loadMaze(file, dr, spreading, tau):
         i = 0
         dist = 0
         while i < totalNodes:
-            if vertices[i].get_factors("smell-loner"):
-                curr_smell = vertices[i].get_factors("smell-loner")
-            elif vertices[i].get_factors("smell-social"):
-                curr_smell = vertices[i].get_factors("smell-social")
+            curr_smell = vertices[i].get_factors("smell")
             if vertices[i].get_environ("monster") == 1:
                 spreadSmell(vertices[i], spreading, dr, dist, curr_smell)
             for j in range(0, totalNodes):
@@ -288,8 +277,7 @@ def loadMaze(file, dr, spreading, tau):
             i += 1
 
         for s in range(0, totalNodes):
-            vertices[s].set_factors("smell-loner", max_smell_vals[s])
-            vertices[s].set_factors("smell-social", max_smell_vals[s])
+            vertices[s].set_factors("smell", max_smell_vals[s])
 
     def calculateWind():
         i = 0
@@ -309,10 +297,7 @@ def loadMaze(file, dr, spreading, tau):
     calculateWind()
 
     def propagateSmell(node):
-        if node.get_factors("smell-loner"):
-            curr_smell = node.get_factors("smell-loner")
-        elif node.get_factors("smell-social"):
-            curr_smell = node.get_factors("smell-social")
+        curr_smell = node.get_factors("smell")
         # print("SMELL = " + str(curr_smell) + " of " + str(node.get_id()))
         spreadSmell(node, spreading, dr, 0, curr_smell)
 
@@ -342,11 +327,7 @@ def loadMaze(file, dr, spreading, tau):
                     currMonsterAmount = vertices[monsters[i]].get_environ(
                         "monster")
                     vertices[monsters[i]].set_environ(
-                        "monster",
-                        currMonsterAmount)  #monster returns, nothing changes
-                    vertices[monsters[i]].set_factors("smell-loner",
-                                                      0.0)  # smell disappears
-                    vertices[monsters[i]].set_factors("smell-social", 0.0)
+                        "monster", currMonsterAmount + 1)  #monster returns
                     monsterWaits.update({i: "NOTwaits"})
 
             for i in range(0, len(tGates)):
@@ -360,6 +341,53 @@ def loadMaze(file, dr, spreading, tau):
 
             for i in range(0, len(monsters)):
                 neighbor = random.choice(vertices[monsters[i]].get_neihbors())
+                curr = vertices[monsters[i]].get_environ("monster")
+                vertices[monsters[i]].set_environ("monster",
+                                                  curr - 1)  # monster leaves
+
+                # LONER: if own smell < curr smell
+                if monsterType == "loner":
+                    if vertices[monsters[i]].get_factors(
+                            "smell") < vertices[neighbor].get_factors("smell"):
+                        vertices[monsters[i]].set_environ("monster",
+                                                          curr + 1)  # return
+                    else:
+                        n = random.choice(vertices[monsters[i]].get_neihbors())
+                        ncurr = vertices[n].get_environ("monster")
+                        vertices[n].set_environ(
+                            "monster", ncurr + 1)  #move to random node
+
+                        maxSmell = 0
+                        # CHOOSE MAX
+                        for k in vertices[n].get_neihbors():
+                            if maxSmell < vertices[k].get_factors("smell"):
+                                maxSmell = vertices[k].get_factors("smell")
+
+                        # update smell of this random node
+                        vertices[n].set_factors("smell", maxSmell)
+                        propagateSmell(vertices[n])
+
+                # SOCIAL: if own smell > curr smell
+                if monsterType == "social":
+                    if vertices[monsters[i]].get_factors(
+                            "smell") > vertices[neighbor].get_factors("smell"):
+                        vertices[monsters[i]].set_environ("monster",
+                                                          curr + 1)  # return
+                    else:
+                        n = random.choice(vertices[monsters[i]].get_neihbors())
+                        ncurr = vertices[n].get_environ("monster")
+                        vertices[n].set_environ(
+                            "monster", ncurr + 1)  #move to random node
+
+                        # sum all smells of adj noes of this random node
+                        totalSmell = 0
+                        for k in vertices[n].get_neihbors():
+                            totalSmell += vertices[n].get_factors("smell")
+
+                        vertices[n].set_factors("smell", totalSmell)
+                        propagateSmell(vertices[n])
+
+                ######################################################
                 if vertices[neighbor].get_environ("hole") == 1 or vertices[
                         neighbor].get_environ("wall") == 1:
                     monsterWaits.update({i: "waits"})
@@ -367,8 +395,7 @@ def loadMaze(file, dr, spreading, tau):
                 elif vertices[neighbor].get_environ("teleport") == 1:
                     teleportWaits.update({i: "waits"})
                     for g in range(0, len(tGates)):
-                        vertices[tGates[g]].set_factors("smell-loner", 1.0)
-                        vertices[tGates[g]].set_factors("smell-social", 1.0)
+                        vertices[tGates[g]].set_factors("smell", 1.0)
                 else:
                     propagateSmell(vertices[monsters[i]])
                     curr = vertices[monsters[i]].get_environ("monster")
@@ -385,7 +412,7 @@ def loadMaze(file, dr, spreading, tau):
         + str(vertices[i].get_environ("hole")) + "," + str(vertices[i].get_environ("monster")) + ","\
         + str(vertices[i].get_environ("gold")) + "," + str(vertices[i].get_environ("teleport")) + ","\
         + str(vertices[i].get_factors("wind")) + ","\
-        + str(vertices[i].get_factors("smell-loner")) + "," + str(vertices[i].get_factors("smell-social")) + " " + str(" ".join(map(str , vertices[i].get_neihbors())))
+        + str(vertices[i].get_factors("smell")) + " " + str(" ".join(map(str , vertices[i].get_neihbors())))
 
         file.write(row)
         file.write("\n")
@@ -393,16 +420,14 @@ def loadMaze(file, dr, spreading, tau):
     file.close()
 
     for i in range(0, totalNodes):
-        print("{}:{},{},{},{},{},{},{},{} {}\n".format(
+        print("{}:{},{},{},{},{},{},{} {}\n".format(
             vertices[i].get_id(), vertices[i].get_environ("wall"),
             vertices[i].get_environ("hole"),
             vertices[i].get_environ("monster"),
             vertices[i].get_environ("gold"),
             vertices[i].get_environ("teleport"),
-            vertices[i].get_factors("wind"),
-            vertices[i].get_factors("smell-loner"),
-            vertices[i].get_factors("smell-social"), " ".join(
-                map(str, vertices[i].get_neihbors()))))
+            vertices[i].get_factors("wind"), vertices[i].get_factors("smell"),
+            " ".join(map(str, vertices[i].get_neihbors()))))
         i += 1
 
 
@@ -451,5 +476,6 @@ else:
     spreading = int(sys.argv[4])
     dr = float(sys.argv[3])
     tau = int(sys.argv[5])
+    monsterType = str(sys.argv[6])
 
-    print(func(f, dr, spreading, tau))
+    print(func(f, dr, spreading, tau, monsterType))
