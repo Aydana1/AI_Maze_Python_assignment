@@ -301,13 +301,17 @@ def loadMaze(file, dr, spreading, tau, monsterType):
         # print("SMELL = " + str(curr_smell) + " of " + str(node.get_id()))
         spreadSmell(node, spreading, dr, 0, curr_smell)
 
-    # MONSTER ARR
-    monsters = []
-    # countMonsters = 0
+    print("----------------before monsters move-------------------------")
     for i in range(0, totalNodes):
-        if vertices[i].get_environ("monster") == 1:
-            monsters.append(i)
-            # countMonsters += 1
+        print("{}:{},{},{},{},{},{},{} {}\n".format(
+            vertices[i].get_id(), vertices[i].get_environ("wall"),
+            vertices[i].get_environ("hole"),
+            vertices[i].get_environ("monster"),
+            vertices[i].get_environ("gold"),
+            vertices[i].get_environ("teleport"),
+            vertices[i].get_factors("wind"), vertices[i].get_factors("smell"),
+            " ".join(map(str, vertices[i].get_neihbors()))))
+        i += 1
 
     # MONSTER MOVING
     def moveMonster():
@@ -315,12 +319,20 @@ def loadMaze(file, dr, spreading, tau, monsterType):
         monsterWaits = {}
         teleportWaits = {}
 
-        tGates = []
-        for i in range(0, len(monsters)):
-            if vertices[monsters[i]].get_environ("teleport") == 1:
-                tGates.append(monsters[i])
-
         for tick in range(0, tau):
+
+            # MONSTER ARR
+            monsters = []
+            for i in range(0, totalNodes):
+                if vertices[i].get_environ("monster") == 1:
+                    monsters.append(i)
+
+            tGates = []
+            for i in range(0, len(monsters)):
+              if vertices[monsters[i]].get_environ("teleport") == 1:
+                    tGates.append(monsters[i])
+              if vertices[monsters[i]].get_environ("monster") == 0:
+                    monsters.remove(i)
 
             for i in range(0, len(monsters)):
                 if monsterWaits.get(i) == "waits":
@@ -329,6 +341,8 @@ def loadMaze(file, dr, spreading, tau, monsterType):
                     vertices[monsters[i]].set_environ(
                         "monster", currMonsterAmount + 1)  #monster returns
                     monsterWaits.update({i: "NOTwaits"})
+                if vertices[monsters[i]].get_environ("monster") == 0:
+                    monsters.remove(i)
 
             for i in range(0, len(tGates)):
                 if teleportWaits.get(i) == "waits":
@@ -340,6 +354,9 @@ def loadMaze(file, dr, spreading, tau, monsterType):
                     teleportWaits.update({i: "NOTwaits"})
 
             for i in range(0, len(monsters)):
+                if vertices[monsters[i]].get_environ("monster") == 0:
+                    monsters.remove(i)
+
                 curr = vertices[monsters[i]].get_environ("monster")
                 vertices[monsters[i]].set_environ("monster",
                                                   curr - 1)  # monster leaves
@@ -424,87 +441,130 @@ def loadMaze(file, dr, spreading, tau, monsterType):
                         for g in range(0, len(tGates)):
                             vertices[tGates[g]].set_factors("smell", 1.0)
 
-                # SUBTASK 2, LONER:
-                listt = vertices[monsters[i]].get_neihbors()
+                # SUBTASK 2, LONER
+                if monsterType == "loner2":
+                  listt = vertices[monsters[i]].get_neihbors()
+                  def moveLonerMonsterOnPairWiseBasis():
+                      # base case: stop when there is only one pair left?
+                      s = len(listt)
 
-                def moveMonsterOnPairWiseBasis():
-                    # base case: stop when there is only one pair left?
-                    s = len(listt)
+                      if s == 2:
+                          return listt
 
-                    if s == 2:
-                        return listt
+                      pairs = []
+                      for m in range(0, s):
+                          j = m + 1
+                          while (j != s):
+                              pair = (listt[m], listt[j])
+                              j += 1
+                              pairs.append(pair)
+                          j = 0
+                          # print(pairs)
+                          # print(" ")
 
-                    pairs = []
-                    for m in range(0, s):
-                        j = m + 1
-                        while (j != s):
-                            pair = (listt[m], listt[j])
-                            j += 1
-                            pairs.append(pair)
-                        j = 0
-                        print(pairs)
-                        print(" ")
+                      # choose max val
+                      maxVal = 0.0
+                      for p in pairs:
+                          if vertices[p[0]].get_factors("smell") > vertices[
+                                  p[1]].get_factors("smell"):
+                              if vertices[p[0]].get_factors("smell") > maxVal:
+                                  maxVal = vertices[p[0]].get_factors("smell")
+                          else:
+                              if vertices[p[1]].get_factors("smell") > maxVal:
+                                  maxVal = vertices[p[1]].get_factors("smell")
+                      print(maxVal)
 
-                    # choose max val
-                    maxVal = 0.0
-                    for p in pairs:
-                        if vertices[p[0]].get_factors("smell") > vertices[
-                                p[1]].get_factors("smell"):
-                            if vertices[p[0]].get_factors("smell") > maxVal:
-                                maxVal = vertices[p[0]].get_factors("smell")
-                        else:
-                            if vertices[p[1]].get_factors("smell") > maxVal:
-                                maxVal = vertices[p[1]].get_factors("smell")
-                    print(maxVal)
+                      # map node indices to freq
+                      freqs = {}
+                      for d in range(0, len(listt)):
+                          freqs.update({listt[d]: 0})
 
-                    # map node indices to freq
-                    freqs = {}
-                    for d in range(0, len(listt)):
-                        freqs.update({listt[d]: 0})
+                      # iterate through pairs to see which nodes have this maxVal mostly
+                      for p in pairs:
+                          if maxVal == vertices[p[0]].get_factors("smell"):
+                              currFreq = freqs.get(p[0])
+                              maxFreq = currFreq + 1
+                              freqs.update({p[0]: maxFreq})
+                          elif maxVal == vertices[p[1]].get_factors("smell"):
+                              currFreq = freqs.get(p[1])
+                              maxFreq = currFreq + 1
+                              freqs.update({p[1]: maxFreq})
 
-                    # iterate through pairs to see which nodes have this maxVal mostly
-                    for p in pairs:
-                        if maxVal == vertices[p[0]].get_factors("smell"):
-                            currFreq = freqs.get(p[0])
-                            maxFreq = currFreq + 1
-                            freqs.update({p[0]: maxFreq})
-                        elif maxVal == vertices[p[1]].get_factors("smell"):
-                            currFreq = freqs.get(p[1])
-                            maxFreq = currFreq + 1
-                            freqs.update({p[1]: maxFreq})
+                      print(freqs)
 
-                    print(freqs)
+                      # eliminate this node from the list of potential places to move
+                      maxF = 0
+                      for f in range(0, len(listt)):
+                          if maxF < freqs.get(listt[f]):
+                              maxF = freqs.get(listt[f])
+                              maxI = listt[f]  # max index
 
-                    # eliminate this node from the list of potential places to move
-                    maxF = 0
-                    for f in range(0, len(listt)):
-                        if maxF < freqs.get(listt[f]):
-                            maxF = freqs.get(listt[f])
-                            maxI = listt[f]  # max index
+                      listt.remove(maxI)  # eliminate
 
-                    listt.remove(maxI)  # eliminate
+                      moveLonerMonsterOnPairWiseBasis()  # search again
 
-                    moveMonsterOnPairWiseBasis()  # search again
+                      # print("List = ")
+                      # print(listt)
 
-                    print("List = ")
-                    print(listt)
+                      # randomly go to one of nodes
+                      room = random.choice(listt)
+                      curr = vertices[monsters[i]].get_environ("monster")
+                      if curr != 0:
+                        vertices[monsters[i]].set_environ("monster", curr - 1)  # leave curr node
+                        curr2 = vertices[room].get_environ("monster")
+                        vertices[room].set_environ("monster",
+                                                curr2 + 1)  # move to this node
+                        propagateSmell(vertices[room])  # update the smell
 
-                    # randomly go to one of nodes
-                    room = random.choice(listt)
-                    curr = vertices[monsters[i]].get_environ("monster")
-                    vertices[monsters[i]].set_environ(
-                        "monster", curr - 1)  # leave curr node
-                    curr2 = vertices[room].get_environ("monster")
-                    vertices[room].set_environ("monster",
-                                               curr2 + 1)  # move to this node
-                    propagateSmell(vertices[room])  # update the smell
+                  moveLonerMonsterOnPairWiseBasis()
+                
+                if monsterType == "social2":
+                  listt = vertices[monsters[i]].get_neihbors()
+                  def moveSocialMonsterOnPairWiseBasis():
+                      # base case: stop when there is only one pair left?
+                      s = len(listt)
 
-                moveMonsterOnPairWiseBasis()
+                      if s == 2:
+                          return listt
+
+                      pairs = []
+                      for m in range(0, s):
+                          j = m + 1
+                          while (j != s):
+                              pair = (listt[m], listt[j])
+                              j += 1
+                              pairs.append(pair)
+                          j = 0
+                          # print(pairs)
+                          # print(" ")
+
+                      # choose max val
+                      maxVal = 0.0
+                      for p in pairs:
+                          if vertices[p[0]].get_factors("smell") > vertices[
+                                  p[1]].get_factors("smell"):
+                              if vertices[p[0]].get_factors("smell") > maxVal:
+                                  maxVal = vertices[p[0]].get_factors("smell")
+                                  maxInd = p[0]
+                          else:
+                              if vertices[p[1]].get_factors("smell") > maxVal:
+                                  maxVal = vertices[p[1]].get_factors("smell")
+                                  maxInd = p[1]
+
+                      val1 = vertices[monsters[i]].get_environ("monster")
+                      if val1 != 0:
+                        vertices[maxInd].set_environ("monster", val1 - 1)
+                        val2 = vertices[maxInd].get_environ("monster")
+                        vertices[maxInd].set_environ("monster", val2 + 1)  #monster moves to max smell node
+                        propagateSmell(vertices[maxInd])
+                        # print(maxVal)
+
+                  moveSocialMonsterOnPairWiseBasis()
 
     moveMonster()
 
+    
     # WRITE FINAL CHANGE TO ANOTHER FILE
-
     file = open("final.txt", "w")
 
     for i in range(0, totalNodes):
@@ -519,6 +579,7 @@ def loadMaze(file, dr, spreading, tau, monsterType):
 
     file.close()
 
+    print("----------------after--------------------------")
     for i in range(0, totalNodes):
         print("{}:{},{},{},{},{},{},{} {}\n".format(
             vertices[i].get_id(), vertices[i].get_environ("wall"),
