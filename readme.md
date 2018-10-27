@@ -1,5 +1,5 @@
 I have initMaze and loadMaze functions in one file "last.py".
-There're also functions for smell&wind calculation, printing, monster moving, smell propagation.
+There're also functions for smell&wind calculation, printing individual nodes, monster moving, smell propagation.
 
 Commands for running the program:
 cd aidana_maze/proj
@@ -16,3 +16,4 @@ If input is "social2" or "loner2", smell is calculated on pairwise basis.
 In case of "unknown" monster, configurations of previous assignment will be applied.
 
 Final change of the maze is saved in "final.txt".
+Format of the node: id: W, H, M, G, T, w, s [neighbor node indices]
