@@ -1,8 +1,8 @@
 TODO:
 1. randomly allocate agent 
-2. choose random action
-agent actions:  pick gold, move forward
-3. if gold == 1:  end 
+
+2. if gold == 1:  end 
   if monster == 1: end
   if hole == 1: end
-4. For each run: Room Id, W, M, H, G, wind, smell: action;
+  
+3. For each run: Room Id, W, M, H, G, wind, smell: action;

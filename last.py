@@ -324,108 +324,64 @@ def loadMaze(file, dr, spreading, tau, monsterType):
         i += 1
 
     # INITIAL POSITION OF AGENT
+    file = open("agent.txt", "w")
+
     random_node = random.choice(vertices)
     agent = Agent(random_node.get_id())
-    print("Agent initial position: ")
-    print(agent.get_position())
+    print("Agent initial position: " + str(agent.get_position()))
+    row = "Agent initial position: " + str(agent.get_position())
+    file.write(row)
+    file.write("\n")
 
     # MONSTER MOVING
-    def moveMonster(level):
-        monsterWaits = {}
-        teleportWaits = {}
+    def moveMonster():
+        for y in range(0, 10000):
+            print("level: " + str(y))
+            row = "level: " + str(y)
+            file.write(row)
+            file.write("\n")
+            monsterWaits = {}
+            teleportWaits = {}
+            killed = False
+            while killed == False:
+                #print("hello")
+                monsters = []
+                for i in range(0, totalNodes):
+                    if vertices[i].get_environ("monster") >= 1:
+                        monsters.append(i)
 
-        for tick in range(0, tau):
-            monsters = []
-            for i in range(0, totalNodes):
-                if vertices[i].get_environ("monster") == 1:
-                    monsters.append(i)
+                tGates = []
+                for i in range(0, len(monsters)):
+                    if vertices[monsters[i]].get_environ("teleport") == 1:
+                        tGates.append(monsters[i])
+                    if vertices[monsters[i]].get_environ("monster") == 0:
+                        monsters.remove(i)
 
-            tGates = []
-            for i in range(0, len(monsters)):
-                if vertices[monsters[i]].get_environ("teleport") == 1:
-                    tGates.append(monsters[i])
-                if vertices[monsters[i]].get_environ("monster") == 0:
-                    monsters.remove(i)
+                for i in range(0, len(monsters)):
+                    if monsterWaits.get(i) == "waits":
+                        currMonsterAmount = vertices[monsters[i]].get_environ("monster")
+                        vertices[monsters[i]].set_environ("monster", currMonsterAmount + 1)  #monster returns
+                        monsterWaits.update({i: "NOTwaits"})
+                    if vertices[monsters[i]].get_environ("monster") == 0:
+                        monsters.remove(i)
 
-            for i in range(0, len(monsters)):
-                if monsterWaits.get(i) == "waits":
-                    currMonsterAmount = vertices[monsters[i]].get_environ("monster")
-                    vertices[monsters[i]].set_environ("monster", currMonsterAmount + 1)  #monster returns
-                    monsterWaits.update({i: "NOTwaits"})
-                if vertices[monsters[i]].get_environ("monster") == 0:
-                    monsters.remove(i)
+                for i in range(0, len(tGates)):
+                    if teleportWaits.get(i) == "waits":
+                        tGates.remove(i)  # teleport gate except current
+                        gateIndex = random.choice(tGates)
+                        curr = vertices[gateIndex].get_environ("monster")
+                        vertices[gateIndex].set_environ("monster", curr + 1)
+                        tGates.append(i)  #put back
+                        teleportWaits.update({i: "NOTwaits"})
 
-            for i in range(0, len(tGates)):
-                if teleportWaits.get(i) == "waits":
-                    tGates.remove(i)  # teleport gate except current
-                    gateIndex = random.choice(tGates)
-                    curr = vertices[gateIndex].get_environ("monster")
-                    vertices[gateIndex].set_environ("monster", curr + 1)
-                    tGates.append(i)  #put back
-                    teleportWaits.update({i: "NOTwaits"})
+                for i in range(0, len(monsters)):
+                    if i in monsters and vertices[monsters[i]].get_environ("monster") == 0:
+                        monsters.remove(i)
 
-            for i in range(0, len(monsters)):
-                if vertices[monsters[i]].get_environ("monster") == 0:
-                    monsters.remove(i)
-
-                curr = vertices[monsters[i]].get_environ("monster")
-                vertices[monsters[i]].set_environ("monster", curr - 1)  # monster leaves
-
-                # LONER: if own smell < curr smell
-                if monsterType == "loner":
-                    n = random.choice(vertices[monsters[i]].get_neihbors())
-                    ncurr = vertices[n].get_environ("monster")
-                    vertices[n].set_environ("monster", ncurr + 1)  #move to random node
-
-                    maxSmell = 0
-                    # CHOOSE MAX
-                    for k in vertices[n].get_neihbors():
-                        if maxSmell < vertices[k].get_factors("smell"):
-                            maxSmell = vertices[k].get_factors("smell")
-                        # update smell of this random node
-                    vertices[n].set_factors("smell", maxSmell)
-                    propagateSmell(vertices[n])
-
-                    if vertices[n].get_factors("smell") < vertices[i].get_factors("smell"):
-                        vertices[monsters[i]].set_environ("monster", [monsters[i]].get_environ("monster") + 1)  # return
-                        vertices[n].set_environ("monster", vertices[n].get_environ("monster") - 1)
-
-                # SOCIAL: if own smell > curr smell
-                if monsterType == "social":
-                    #agent movement
-                    neighbors = vertices[agent.get_position()].get_neihbors()
-                    random_node = random.choice(neighbors)
-                    agent.set_position(random_node)
-                    print("Agent moved to: ")
-                    print(agent.get_position())
-                    curr_agent_pos = agent.get_position()
-
-                    if vertices[curr_agent_pos].get_environ("monster") >= 1:
-                        startGame(level)
-                    elif vertices[curr_agent_pos].get_environ("hole") == 1:
-                        startGame(level)
-                    elif vertices[curr_agent_pos].get_environ("gold") == 1:
-                        vertices[curr_agent_pos].set_environ("gold", 0)  # agent picks up the gold
-                        startGame(level)
-
-                    n = random.choice(vertices[monsters[i]].get_neihbors())
-                    ncurr = vertices[n].get_environ("monster")
-                    vertices[n].set_environ("monster", ncurr + 1)  #move to random node
-
-                    # sum all smells of adj noes of this random node
-                    totalSmell = 0
-                    for k in vertices[n].get_neihbors():
-                        totalSmell += vertices[k].get_factors("smell")
-
-                    vertices[n].set_factors("smell", totalSmell)
-                    propagateSmell(vertices[n])
-
-                    if vertices[n].get_factors("smell") > vertices[i].get_factors("smell"):
-                        vertices[monsters[i]].set_environ("monster", vertices[monsters[i]].get_environ("monster") + 1)  # return
-                        vertices[n].set_environ("monster", vertices[n].get_environ("monster") - 1)
-
-                ######################################################
-                if monsterType == "unknown":
+                    if i in monsters:
+                        curr = vertices[monsters[i]].get_environ("monster")
+                        vertices[monsters[i]].set_environ("monster", curr - 1)  # monster leaves
+                    
                     neighbor = random.choice(vertices[monsters[i]].get_neihbors())
                     curr = vertices[monsters[i]].get_environ("monster")
                     ncurr = vertices[neighbor].get_environ("monster")
@@ -444,164 +400,151 @@ def loadMaze(file, dr, spreading, tau, monsterType):
                         for g in range(0, len(tGates)):
                             vertices[tGates[g]].set_factors("smell", 1.0)
 
-                # SUBTASK 2, LONER
-                if monsterType == "loner2":
-                    listt = vertices[monsters[i]].get_neihbors()
-                    def moveLonerMonsterOnPairWiseBasis():
-                        # base case: stop when there is only one pair left?
-                        s = len(listt)
+                    if monsterType == "loner":
+                        n = random.choice(vertices[monsters[i]].get_neihbors())
+                        ncurr = vertices[n].get_environ("monster")
+                        vertices[n].set_environ("monster", ncurr + 1)  #move to random node
 
-                        if s == 2:
-                            return listt
+                        maxSmell = 0
+                        # CHOOSE MAX
+                        for k in vertices[n].get_neihbors():
+                            if maxSmell < vertices[k].get_factors("smell"):
+                                maxSmell = vertices[k].get_factors("smell")
+                            # update smell of this random node
+                        vertices[n].set_factors("smell", maxSmell)
+                        propagateSmell(vertices[n])
 
-                        pairs = []
-                        for m in range(0, s):
-                            j = m + 1
-                            while (j != s):
-                                pair = (listt[m], listt[j])
-                                j += 1
-                                pairs.append(pair)
-                            j = 0
-                            # print(pairs)
-                            # print(" ")
-
-                        # choose max val
-                        maxVal = 0.0
-                        for p in pairs:
-                            if vertices[p[0]].get_factors("smell") > vertices[
-                                p[1]].get_factors("smell"):
-                                if vertices[p[0]].get_factors("smell") > maxVal:
-                                    maxVal = vertices[p[0]].get_factors("smell")
-                            else:
-                                if vertices[p[1]].get_factors("smell") > maxVal:
-                                    maxVal = vertices[p[1]].get_factors("smell")
-                        print(maxVal)
-
-                        # map node indices to freq
-                        freqs = {}
-                        for d in range(0, len(listt)):
-                            freqs.update({listt[d]: 0})
-                        # iterate through pairs to see which nodes have this maxVal mostly
-                        for p in pairs:
-                            if maxVal == vertices[p[0]].get_factors("smell"):
-                                currFreq = freqs.get(p[0])
-                                maxFreq = currFreq + 1
-                                freqs.update({p[0]: maxFreq})
-                            elif maxVal == vertices[p[1]].get_factors("smell"):
-                                currFreq = freqs.get(p[1])
-                                maxFreq = currFreq + 1
-                                freqs.update({p[1]: maxFreq})
-
-                        print(freqs)
-
-                        # eliminate this node from the list of potential places to move
-                        maxF = 0
-                        for f in range(0, len(listt)):
-                            if maxF < freqs.get(listt[f]):
-                                maxF = freqs.get(listt[f])
-                                maxI = listt[f]  # max index
-
-                        listt.remove(maxI)  # eliminate
-
-                        moveLonerMonsterOnPairWiseBasis()  # search again
-
-                        # print("List = ")
-                        # print(listt)
-
-                        # randomly go to one of nodes
-                        room = random.choice(listt)
-                        curr = vertices[monsters[i]].get_environ("monster")
-                        if curr != 0:
-                            vertices[monsters[i]].set_environ("monster", curr - 1)  # leave curr node
-                            curr2 = vertices[room].get_environ("monster")
-                            vertices[room].set_environ("monster", curr2 + 1)  # move to this node
-                            propagateSmell(vertices[room])  # update the smell
-
-                    moveLonerMonsterOnPairWiseBasis()
+                        if vertices[n].get_factors("smell") < vertices[i].get_factors("smell"):
+                            vertices[monsters[i]].set_environ("monster", vertices[monsters[i]].get_environ("monster") + 1)  # return
+                            vertices[n].set_environ("monster", vertices[n].get_environ("monster") - 1)
                         
-                if monsterType == "social2":
-                    listt = vertices[monsters[i]].get_neihbors()
-                    def moveSocialMonsterOnPairWiseBasis():
-                    # base case: stop when there is only one pair left?
-                        s = len(listt)
+                    if monsterType == "social":
+                        listt = vertices[monsters[i]].get_neihbors()
+                        def moveSocialMonsterOnPairWiseBasis():
+                        # base case: stop when there is only one pair left?
+                            s = len(listt)
 
-                        if s == 2:
-                            return listt
+                            if s == 2:
+                                return listt
 
-                        pairs = []
-                        for m in range(0, s):
-                            j = m + 1
-                            while (j != s):
-                                pair = (listt[m], listt[j])
-                                j += 1
-                                pairs.append(pair)
-                            j = 0
-                            # print(pairs)
-                            # print(" ")
+                            pairs = []
+                            for m in range(0, s):
+                                j = m + 1
+                                while (j != s):
+                                    pair = (listt[m], listt[j])
+                                    j += 1
+                                    pairs.append(pair)
+                                j = 0
+                                # print(pairs)
+                                # print(" ")
 
-                        # choose max val
-                        maxVal = 0.0
-                        for p in pairs:
-                            if vertices[p[0]].get_factors("smell") > vertices[
-                                p[1]].get_factors("smell"):
-                                if vertices[p[0]].get_factors("smell") > maxVal:
-                                    maxVal = vertices[p[0]].get_factors("smell")
-                                    maxInd = p[0]
-                            else:
-                                if vertices[p[1]].get_factors("smell") > maxVal:
-                                    maxVal = vertices[p[1]].get_factors("smell")
-                                    maxInd = p[1]
+                            # choose max val
+                            maxVal = 0.0
+                            for p in pairs:
+                                if vertices[p[0]].get_factors("smell") > vertices[
+                                    p[1]].get_factors("smell"):
+                                    if vertices[p[0]].get_factors("smell") > maxVal:
+                                        maxVal = vertices[p[0]].get_factors("smell")
+                                        maxInd = p[0]
+                                else:
+                                    if vertices[p[1]].get_factors("smell") > maxVal:
+                                        maxVal = vertices[p[1]].get_factors("smell")
+                                        maxInd = p[1]
 
-                        val1 = vertices[monsters[i]].get_environ("monster")
-                        if val1 != 0:
-                            vertices[maxInd].set_environ("monster", val1 - 1)
-                            val2 = vertices[maxInd].get_environ("monster")
-                            vertices[maxInd].set_environ("monster", val2 + 1)  #monster moves to max smell node
-                            propagateSmell(vertices[maxInd])
-                            # print(maxVal)
+                            val1 = vertices[monsters[i]].get_environ("monster")
+                            if val1 != 0:
+                                vertices[maxInd].set_environ("monster", val1 - 1)
+                                val2 = vertices[maxInd].get_environ("monster")
+                                vertices[maxInd].set_environ("monster", val2 + 1)  #monster moves to max smell node
+                                propagateSmell(vertices[maxInd])
+                                # print(maxVal)
+                        moveSocialMonsterOnPairWiseBasis()
+                
 
-                    moveSocialMonsterOnPairWiseBasis()
+                #agent movement
+                neighbors = vertices[agent.get_position()].get_neihbors()
+                random_node = random.choice(neighbors)
+                agent.set_position(random_node)
+                curr_agent_pos = agent.get_position()
+                print("Agent moved to: " + str(curr_agent_pos))
+                row = "Agent moved to: " + str(curr_agent_pos)
+                file.write(row)
+                file.write("\n")
 
+                actions = ["killed", "found gold", "fall into a hole"]
+                if vertices[curr_agent_pos].get_environ("monster") >= 1:
+                    y += 1
+                    print("{}, {}, {}, {}, {}, {}, {}: {}".format(curr_agent_pos, vertices[curr_agent_pos].get_environ("wall"), 
+                        vertices[curr_agent_pos].get_environ("monster"), vertices[curr_agent_pos].get_environ("hole"), vertices[curr_agent_pos].get_environ("gold"),
+                        vertices[curr_agent_pos].get_factors("wind"), vertices[curr_agent_pos].get_factors("smell"),
+                        actions[0]))
+                    #file = open("agent.txt", "w")
+                    row = str(vertices[curr_agent_pos].get_id()) + ", " + str(vertices[curr_agent_pos].get_environ("monster")) + ", " + str(vertices[curr_agent_pos].get_environ("monster")) + ", " + str(vertices[curr_agent_pos].get_environ("hole")) + ", " + str(vertices[curr_agent_pos].get_environ("gold")) + ", " + str(vertices[curr_agent_pos].get_factors("wind")) + ", " + str(vertices[curr_agent_pos].get_factors("smell")) + ": " + actions[0]
+                    file.write(row)
+                    file.write("\n")
+                    killed = True
+                    break
+                elif vertices[curr_agent_pos].get_environ("hole") == 1:
+                    print("{}, {}, {}, {}, {}, {}, {}: {}".format(curr_agent_pos, vertices[curr_agent_pos].get_environ("wall"), 
+                        vertices[curr_agent_pos].get_environ("monster"), vertices[curr_agent_pos].get_environ("hole"), vertices[curr_agent_pos].get_environ("gold"),
+                        vertices[curr_agent_pos].get_factors("wind"), vertices[curr_agent_pos].get_factors("smell"),
+                        actions[2]))
+                    y += 1
+                    #file = open("agent.txt", "w")
+                    row = str(vertices[curr_agent_pos].get_id()) + ", " + str(vertices[curr_agent_pos].get_environ("monster")) + ", " + str(vertices[curr_agent_pos].get_environ("monster")) + ", " + str(vertices[curr_agent_pos].get_environ("hole")) + ", " + str(vertices[curr_agent_pos].get_environ("gold")) + ", " + str(vertices[curr_agent_pos].get_factors("wind")) + ", " + str(vertices[curr_agent_pos].get_factors("smell")) + ": " + actions[2]
+                    file.write(row)
+                    file.write("\n")
+                    killed = True
+                    break
+                elif vertices[curr_agent_pos].get_environ("gold") == 1:
+                    vertices[curr_agent_pos].set_environ("gold", 0)  # agent picks up the gold
+                    print("{}, {}, {}, {}, {}, {}, {}: {}".format(curr_agent_pos, vertices[curr_agent_pos].get_environ("wall"), 
+                        vertices[curr_agent_pos].get_environ("monster"), vertices[curr_agent_pos].get_environ("hole"), vertices[curr_agent_pos].get_environ("gold"),
+                        vertices[curr_agent_pos].get_factors("wind"), vertices[curr_agent_pos].get_factors("smell"), 
+                        actions[1]))
+                    #file = open("agent.txt", "w")
+                    row = str(vertices[curr_agent_pos].get_id()) + ", " + str(vertices[curr_agent_pos].get_environ("monster")) + ", " + str(vertices[curr_agent_pos].get_environ("monster")) + ", " + str(vertices[curr_agent_pos].get_environ("hole")) + ", " + str(vertices[curr_agent_pos].get_environ("gold")) + ", " + str(vertices[curr_agent_pos].get_factors("wind")) + ", " + str(vertices[curr_agent_pos].get_factors("smell")) + ": " + actions[1]
+                    file.write(row)
+                    file.write("\n")
+                    y += 1
+                    killed = True
+                    break
+            print("-----------------------------")
+            row = "-----------------------------"
+            file.write(row)
+            file.write("\n")
+        file.close()
 
-    def startGame(level):
-        
-        level += 1
-
-        if level == 100:
-            return
-
-        moveMonster(level)
-        print("monster moved")
-
-    startGame(0)
-            
+    moveMonster()
     
+
+
     # WRITE FINAL CHANGE TO ANOTHER FILE
-    file = open("final.txt", "w")
+    # file = open("final.txt", "w")
 
-    for i in range(0, totalNodes):
-        row = str(vertices[i].get_id()) + ":" + str(vertices[i].get_environ("wall")) + ","\
-        + str(vertices[i].get_environ("hole")) + "," + str(vertices[i].get_environ("monster")) + ","\
-        + str(vertices[i].get_environ("gold")) + "," + str(vertices[i].get_environ("teleport")) + ","\
-        + str(vertices[i].get_factors("wind")) + ","\
-        + str(vertices[i].get_factors("smell")) + " " + str(" ".join(map(str , vertices[i].get_neihbors())))
+    # for i in range(0, totalNodes):
+    #     row = str(vertices[i].get_id()) + ":" + str(vertices[i].get_environ("wall")) + ","\
+    #     + str(vertices[i].get_environ("hole")) + "," + str(vertices[i].get_environ("monster")) + ","\
+    #     + str(vertices[i].get_environ("gold")) + "," + str(vertices[i].get_environ("teleport")) + ","\
+    #     + str(vertices[i].get_factors("wind")) + ","\
+    #     + str(vertices[i].get_factors("smell")) + " " + str(" ".join(map(str , vertices[i].get_neihbors())))
 
-        file.write(row)
-        file.write("\n")
+    #     file.write(row)
+    #     file.write("\n")
 
-    file.close()
+    # file.close()
 
-    print("----------------after--------------------------")
-    for i in range(0, totalNodes):
-        print("{}:{},{},{},{},{},{},{} {}\n".format(
-            vertices[i].get_id(), vertices[i].get_environ("wall"),
-            vertices[i].get_environ("hole"),
-            vertices[i].get_environ("monster"),
-            vertices[i].get_environ("gold"),
-            vertices[i].get_environ("teleport"),
-            vertices[i].get_factors("wind"), vertices[i].get_factors("smell"),
-            " ".join(map(str, vertices[i].get_neihbors()))))
-        i += 1
+    # print("----------------after--------------------------")
+    # for i in range(0, totalNodes):
+    #     print("{}:{},{},{},{},{},{},{} {}\n".format(
+    #         vertices[i].get_id(), vertices[i].get_environ("wall"),
+    #         vertices[i].get_environ("hole"),
+    #         vertices[i].get_environ("monster"),
+    #         vertices[i].get_environ("gold"),
+    #         vertices[i].get_environ("teleport"),
+    #         vertices[i].get_factors("wind"), vertices[i].get_factors("smell"),
+    #         " ".join(map(str, vertices[i].get_neihbors()))))
+    #     i += 1
 
 
 # READING FROM COMMAND LINE

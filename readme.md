@@ -11,9 +11,5 @@ For loading from the file, run:
 python last.py loadMaze maze.txt decay spreading tau monsterType
 E.g: python last.py loadMaze maze.txt 0.5 2 5 social
 
-Note: There're 5 monster types: social, loner, unknown, social2, loner2
-If input is "social2" or "loner2", smell is calculated on pairwise basis.
-In case of "unknown" monster, configurations of previous assignment will be applied.
-
-Final change of the maze is saved in "final.txt".
-Format of the node: id: W, H, M, G, T, w, s [neighbor node indices]
+Final change of the maze is saved in "agent.txt".
+Room Id, W, M, H, G, wind, smell: action;
